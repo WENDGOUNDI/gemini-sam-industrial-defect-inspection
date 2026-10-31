@@ -1,59 +1,134 @@
-# VisionAI Industrial Inspection — Gemini + SAM
+# Gemini + SAM For Industrial Defect Inspection
+AI-powered industrial visual inspection using Google Gemini for defect detection and Meta Segment Anything (SAM) for pixel-level segmentation.
+# VisionAI — Industrial Defect Inspection with Gemini & SAM
 
-AI-assisted visual inspection: compare a defect-free reference to a test image, localize multiple suspected defects with Gemini, segment them using SAM ViT-B, annotate results, and store inspection history.
+AI-powered visual inspection application combining **Google Gemini** and **Meta Segment Anything Model (SAM)** for manufacturing defect detection, localization, and segmentation.
+We used MVTEC dataset downloaded from kaggle for testing the implemented system.
 
-## Setup (Python 3.11 or 3.12 recommended)
+## Overview
 
-```bash
-python -m venv .venv
-# Windows: .venv\\Scripts\\activate
-# Linux/macOS: source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env  # Windows: copy .env.example .env
+VisionAI compares a test image against a defect-free reference image to identify manufacturing anomalies. It leverages Gemini's multimodal reasoning capabilities to detect and describe potential defects, while SAM generates pixel-level segmentation masks of the identified regions.
+
+The application provides an interactive web interface built with NiceGUI.
+
+## Key Features
+
+- **Reference-Based Inspection:** Compare test images against defect-free reference images.
+- **AI Defect Detection:** Use Gemini to identify, describe, and localize potential manufacturing defects.
+- **Multi-Defect Detection:** Identify multiple defects within a single image.
+- **Pixel-Level Segmentation:** Use SAM to generate masks for detected regions.
+- **Optional Image Alignment:** OpenCV-based image registration for geometric alignment.
+- **Visual Inspection Results:** Display PASS/FAIL status, annotated images, defect details, and processing time.
+- **Defect Measurement:** Calculate segmented areas in pixels, with optional physical calibration.
+- **Inspection History:** Store and review previous inspections.
+- **Batch Inspection:** Process multiple test images.
+- **Report Export:** Export inspection results and annotated images in PDF or CSV.
+- **Camera Support:** Capture images directly through the web interface.
+
+## AI Inspection Pipeline
+
+```text
+Reference Image + Test Image
+             |
+             v
+   Optional Image Alignment
+             |
+             v
+      Google Gemini
+  Defect Detection & Localization
+             |
+             v
+      Bounding Boxes
+             |
+             v
+    Segment Anything (SAM)
+     Defect Segmentation
+             |
+             v
+       Inspection Results
+  PASS/FAIL | Masks | Defect Details
 ```
 
-Set `GEMINI_API_KEY` in `.env`. Set `GEMINI_MODEL` to a Gemini model available to your account (default `gemini-2.5-flash`; change to your verified model name as needed). Download the official **SAM ViT-B checkpoint** (`sam_vit_b_01ec64.pth`) from the Meta Segment Anything project and put it in this folder, or set `SAM_CHECKPOINT` to its absolute path. On Windows, use a CUDA-enabled PyTorch installation if you have a compatible GPU. CPU mode works but is slower.
+Gemini performs semantic image comparison and defect localization. SAM uses the generated bounding boxes to segment suspected defect regions.
+
+## Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Google Gemini | Multimodal defect detection and localization |
+| Meta SAM (ViT-B) | Image segmentation |
+| PyTorch | Model inference |
+| OpenCV | Image processing and alignment |
+| NiceGUI | Web application interface |
+| SQLite | Inspection history |
+| Python | Backend implementation |
+
+## Installation
+
+**1. Clone the repository**
+
+```bash
+git clone https://github.com/WENDGOUNDI/gemini-sam-industrial-defect-inspection.git
+cd gemini-sam-industrial-defect-inspection
+```
+
+**2. Install dependencies**
+
+```bash
+pip install -r requirements.txt
+```
+
+**3. Configure environment variables**
+
+Create a `.env` file using `.env.example` and configure your Gemini API key, model name, and SAM checkpoint path.
+
+```env
+GEMINI_API_KEY=your_api_key
+GEMINI_MODEL=your_supported_gemini_model
+SAM_CHECKPOINT=./sam_vit_b_01ec64.pth
+```
+
+Download the compatible SAM ViT-B checkpoint from the official [Segment Anything repository](https://github.com/facebookresearch/segment-anything).
+
+Download MVTEC dataset from kaggle [MVTEC Dataset](https://www.kaggle.com/datasets/ipythonx/mvtec-ad).
+
+**4. Run the application**
 
 ```bash
 python app.py
 ```
 
-Open http://localhost:8080.
+Open `http://localhost:8080` in your browser.
 
-## Features
+## Usage
 
-- Server-validated uploads (NiceGUI newer `e.file.read()` and older `e.content.read()`), isolated by browser page
-- Disabled inspection button until reference and test images are received and decoded
-- Optional ORB/RANSAC registration with conservative rejection of unreliable transformations
-- Gemini structured JSON response for multiple defects
-- SAM segmentation for each proposed defect, protected by an inference lock
-- Defect list, bounding boxes, segmentation overlays, runtime and optional calibrated area
-- SQLite inspection history and local annotated images
-- Export annotated JPG, CSV, PDF
-- Batch inspection of up to 30 images from a ZIP archive
-- Browser camera still capture (requires localhost or HTTPS, permission and camera)
-- Optional HTTPS MES webhook (explicit button; no automatic data transfer)
+1. Upload a defect-free reference image.
+2. Upload a test image or capture one using the camera.
+3. Optionally enable image alignment.
+4. Click **START INSPECTION**.
+5. Review detected defects, segmentation masks, and inspection metrics.
+6. Export results or review inspection history.
 
-## Notes and limitations
+## Application Demo
+#### Bottle Inspection
+<img width="1350" height="1587" alt="Image" src="https://github.com/user-attachments/assets/6acc9886-a0cb-4c60-b438-3dcb9840880b" />
 
-- **Prototype, not a validated industrial safety/quality gate.** Gemini detections may be inaccurate or inconsistent. Verify against labeled factory data before using for acceptance/rejection.
-- SAM mask area represents the **segmented region**, not necessarily the true damaged area. `PIXELS_PER_MM` requires real calibration; leaving it at 0 disables mm² output.
-- Registration is optional. If registration fails with equal-sized images, inspection continues unaligned with a warning. If dimensions differ, inspection fails rather than silently distorting images.
-- Gemini image inputs are transmitted to Google's API. Obtain data-privacy approval before using sensitive factory images.
-- History is stored locally in `data/` without user authentication. Add authentication, retention policies, rate limits and encrypted storage before network deployment.
-- Batch mode is sequential; costs and latency scale with number of images. The SAM checkpoint is loaded on first FAIL inspection to avoid unnecessary startup overhead.
-- MES webhook is a simple outbound JSON POST, not a specific MES vendor integration.
-- Camera capture takes a still frame automatically after permission; it is not continuous video inspection.
-- Gemini confidence scores are deliberately not fabricated. A production workflow should add human review and calibrated validation metrics.
+#### Cable Inspection
+<img width="1350" height="1587" alt="Image" src="https://github.com/user-attachments/assets/33e0b595-9456-416f-91af-97417ea9f551" />
 
-## Troubleshooting uploads
+#### Resistor Inspection
+<img width="1350" height="1708" alt="Image" src="https://github.com/user-attachments/assets/d1a382c5-123e-45a0-a870-211643e85c9e" />
 
-If the upload progress shows 100% but status stays `Waiting for image`, check the server console for errors and confirm your installed NiceGUI version. The upload callbacks explicitly validate and save bytes and the inspection button only becomes enabled after both callbacks succeed.
+#### Tile Inspection
+<img width="1350" height="1587" alt="Image" src="https://github.com/user-attachments/assets/457fb01f-41d3-47b5-ab03-dec68c1d4247" />
 
-## Final UI and startup behavior
+#### **Tile** Inspection
+<img width="1350" height="1708" alt="Image" src="https://github.com/user-attachments/assets/aa9d5dc8-ff85-42cb-ab2d-a84f079b17c8" />
 
-- The reference and test image uploaders are hidden; use **Upload / Replace** to open the file picker. Only the current image preview is displayed.
-- **Camera** and **Clear** remain available for both images.
-- Auto-align is optional and defaults to off.
-- SAM is loaded once at application startup, before NiceGUI begins serving the app. Startup will fail with a clear error if the SAM checkpoint is missing.
-- The existing batch uploader, inspection history, exports, and MES integration are unchanged.
+## Notes
+
+VisionAI is a prototype demonstrating the integration of multimodal foundation models and image segmentation for industrial visual inspection. Detection and segmentation accuracy depend on image quality, model performance, and inspection conditions. Production deployment requires validation against representative manufacturing datasets.
+
+## License
+
+Add a license file if you intend to distribute the project under an open-source license.

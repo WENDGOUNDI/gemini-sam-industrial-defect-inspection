@@ -1,0 +1,12 @@
+nicegui>=2.0,<4
+google-genai>=1.0,<2
+segment-anything @ git+https://github.com/facebookresearch/segment-anything.git
+numpy>=1.26,<3
+opencv-python-headless>=4.8
+Pillow>=10
+python-dotenv>=1
+pydantic>=2
+requests>=2.31
+reportlab>=4
+torch>=2.2
+torchvision>=0.17
